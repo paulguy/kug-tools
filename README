@@ -1,0 +1,60 @@
+kug-tools - Handful of utilities for handling Knytt Underground World.bin file
+------------------------------------------------------------------------------
+
+Currently, the utilities are very simple and may output a lot of excess information, but they seem to work.
+
+lskug - list files in a world file
+exkug - extract files from a world file to a directory
+pkkug - package files from a directory in to a world file
+geokug - visually display occupied screen in a world directory
+
+lskug
+-----
+
+USAGE:
+lskug <filename>
+
+Print a list of files contained within filename.
+
+Example Output:
+0: Tiles @10
+1: Sprites @1072
+2: Script @2000
+...
+
+exkug
+-----
+
+USAGE:
+exkug <filename>
+
+Extract all files from filename and write each to a directory whose name is determined by removing the file 
+extension from the filename.  Status is displayed for progress.
+
+TODO: Currently the filename must have an extension otherwise it'll fail to create the directory.
+
+pkkug
+-----
+
+USAGE:
+pkkug <pathname>
+
+Take all files in pathname and package them in to pathname.bin.  If the file exists, it'll be overwritten.
+
+TODO: Currently outputs a lot of debug data, make it output status similar to exkug.
+
+geokug
+------
+
+USAGE:
+geokug <pathname>
+
+Scan a world directory and display visually which screens are occupied, indicated with a # for occupied or a 
+space for empty.  This only works for the "default" naming method ("x,y ...").  If a world is constructed 
+differently, this tool won't work.
+
+Example Output:
+Dimensions:  X: 0 - 5  Y: 0 - 2
+# ####
+## ###
+ ### #
