@@ -41,8 +41,6 @@ pkkug <pathname>
 
 Take all files in pathname and package them in to pathname.bin.  If the file exists, it'll be overwritten.
 
-TODO: Currently outputs a lot of debug data, make it output status similar to exkug.
-
 geokug
 ------
 

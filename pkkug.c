@@ -4,18 +4,25 @@
 
 #include "kugfile.h"
 
+void printstatus(int complete, int total);
+
 int main(int argc, char **argv) {
 	kug_file *f = NULL;
 	kug_status ret;
 	char *filename;
+	int namelen;
 
 	if(argc < 2) {
 		fprintf(stderr, "USAGE: pkkug <dirname>\n");
 		exit(EXIT_FAILURE);
 	}
 
-	filename = malloc(strlen(argv[1]) + 4 + 1); /* length + ".bin" + '\0' */
-	sprintf(filename, "%s.bin", argv[1]);
+	namelen = strlen(argv[1]);
+	filename = malloc(namelen + 4 + 1); /* length + ".bin" + '\0' */
+	strcpy(filename, argv[1]);
+	if(filename[namelen - 1] == '/') /* remove trailing slash, if any */
+		namelen--;
+	strcpy(&filename[namelen], ".bin");
 
 	ret = kug_open_dir(argv[1], &f);
 	if(ret != KUG_OK) {
@@ -29,7 +36,7 @@ int main(int argc, char **argv) {
 	if(f->file == NULL) {
 		fprintf(stderr, "Failed to open file %s.", filename);
 	} else {
-		ret = kug_write(f);
+		ret = kug_write(f, printstatus);
 		if(ret != KUG_OK) {
 			fprintf(stderr, "kug_write: %s\n", kug_strerror(ret));
 			kug_free(f);
@@ -40,4 +47,8 @@ int main(int argc, char **argv) {
 	kug_free(f);
 
 	exit(EXIT_SUCCESS);
+}
+
+void printstatus(int complete, int total) {
+	fprintf(stderr, "%i/%i\r", complete, total);
 }

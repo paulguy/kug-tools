@@ -473,7 +473,6 @@ kug_status __copy_data_in(kug_file *f, FILE *in) {
 	if(fseek(f->file, end, SEEK_SET) < 0)
 		return(KUG_IO);
 
-	fprintf(stderr, "%li %li %u\n", cur, end, totlen);
 	return(KUG_OK);
 }
 
@@ -523,7 +522,7 @@ static kug_status __write_item(kug_file *f, int index) {
 	return(KUG_OK);
 }
 
-kug_status kug_write(kug_file *f) {
+kug_status kug_write(kug_file *f, void (*statuscallback)(int, int)) {
 	int i;
 	kug_status ret;
 
@@ -531,6 +530,7 @@ kug_status kug_write(kug_file *f) {
 		ret = __write_item(f, i);
 		if(ret != KUG_OK)
 			return(ret);
+		statuscallback(i, f->items);
 	}
 
 	return(KUG_OK);

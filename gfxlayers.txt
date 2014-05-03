@@ -1,0 +1,47 @@
+----------Layer 1----------
+Background Gradient
+----------Layer 2----------
+Objects (object layer 0)
+Objects (object layer 1)
+Objects (object layer 2)
+Objects (object layer 3)
+Objects (object layer 4)
+Objects (object layer 5)
+----------Layer 3-----------
+Collision Mask
+Sprites (sprite layer -1)
+Sprites (sprite layer 0, includes Item)
+Player
+Robots
+Bullets
+Sprites (sprite layer 1)
+----------Layer 4----------
+Objects (iobject layer 6)
+Objects (object layer 7)
+----------Layer 5----------
+Tiles
+Objects (object layer 8)
+Objects (object layer 9)
+----------Layer 6----------
+Vignette
+----------Layer 7----------
+Minimap
+Objects (object layer 10)
+Objects (object layer 11)
+----------Layer 8----------
+Sprites (sprite layer 2)
+Sprites (sprite layer 3)
+Sprites (sprite layer 4) & Control Hint
+----------Layer 9----------
+World Map
+----------Layer 10----------
+World Map Icons
+----------Layer 11----------
+Inventory
+----------Layer 12----------
+Dialog
+----------Layer 13----------
+Blackout
+----------Layer 14----------
+Transaction
+

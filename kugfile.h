@@ -26,4 +26,4 @@ kug_status kug_close(kug_file *f);
 kug_status kug_load(kug_file *f, int index);
 void kug_unload(kug_file *f, int index);
 kug_status kug_copy(kug_file *f, int index, FILE *out);
-kug_status kug_write(kug_file *f);
+kug_status kug_write(kug_file *f, void (*statuscallback)(int, int));
