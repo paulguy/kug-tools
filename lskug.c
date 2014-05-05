@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "kugfile.h"
+#include "kugiter.h"
 
 int main(int argc, char **argv) {
 	kug_file *f = NULL;

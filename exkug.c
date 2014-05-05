@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include "kugfile.h"
+#include "kugiter.h"
 
 void usage();
 

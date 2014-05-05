@@ -1,3 +1,6 @@
+#ifndef __KUGFILE_H
+#define __KUGFILE_H
+
 #include "kugerr.h"
 
 #define KUG_BUFFERSIZE (1024 * 64)
@@ -24,11 +27,6 @@ typedef struct {
 	FILE *file;
 	kug_source src;
 } kug_file;
-
-typedef struct {
-	kug_file *f;
-	int index;
-} kug_iterator;
 
 /*
  * Initialize a blank KUG data context.
@@ -151,6 +149,4 @@ kug_status kug_add_item(kug_file *f);
  */
 kug_status kug_del_item(kug_file *f, int index);
 
-kug_iterator *kug_init_iterator(kug_file *f);
-void kug_free_iterator(kug_iterator *iter);
-int kug_iter_next(kug_iterator *iter);
+#endif
