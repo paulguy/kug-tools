@@ -32,11 +32,12 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	f->file = fopen(filename, "wb");
+	ret = kug_open_for_write(filename, f);
 	if(f->file == NULL) {
-		fprintf(stderr, "Failed to open file %s.", filename);
+		fprintf(stderr, "kug_open_for_write: %s: %s.", filename, kug_strerror(ret));
 	} else {
 		ret = kug_write(f, printstatus);
+		fprintf(stderr, "\n");
 		if(ret != KUG_OK) {
 			fprintf(stderr, "kug_write: %s\n", kug_strerror(ret));
 			kug_free(f);

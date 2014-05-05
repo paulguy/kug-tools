@@ -28,6 +28,7 @@ kug_file *kug_init() {
 	f->items = 0;
 	f->file = NULL;
 	f->basename = NULL;
+	f->src = KUG_SRC_UNKNOWN;
 
 	return(f);
 
@@ -52,7 +53,15 @@ static kug_item *__item_init() {
 	return(it);
 }
 
-static kug_status __item_add_new(kug_file *f) {
+static void __item_free(kug_item *it) {
+	if(it->name != NULL)
+		free(it->name);
+	if(it->data != NULL)
+		free(it->data);
+	free(it);
+}
+
+kug_status kug_add_item(kug_file *f) {
 	kug_item **temp;
 
 	if(f->items == f->itemlistsize) {
@@ -73,12 +82,7 @@ static kug_status __item_add_new(kug_file *f) {
 }
 
 static void __item_remove_last(kug_file *f) {
-	kug_item *it = __get_cur_item(f);
-
-	if(it->name != NULL)
-		free(it->name);
-	free(it);
-
+	__item_free(__get_cur_item(f));
 	f->items--;
 }
 
@@ -126,7 +130,7 @@ static kug_status __read_item(kug_file *f) {
 	kug_item *it;
 	int temp;
 
-	ret = __item_add_new(f);
+	ret = kug_add_item(f);
 	if(ret != KUG_OK)
 		goto error0;
 	it = __get_cur_item(f);
@@ -210,7 +214,7 @@ kug_status kug_open(char *name, kug_file **fp) {
 	f->basename = malloc(strlen(name) + 1);
 	if(f->basename == NULL) {
 		ret = KUG_NOMEM;
-		goto error2;
+		goto error1;
 	}
 	strcpy(f->basename, name);
 	point = strrchr(f->basename, '.');
@@ -219,14 +223,63 @@ kug_status kug_open(char *name, kug_file **fp) {
 
 	ret = __read_items(f);
 	if(ret != KUG_OK)
-		goto error2;
+		goto error1;
+
+	f->src = KUG_SRC_FILE;
 
 	*fp = f;
 	return(KUG_OK);
 
-error2:
-	fclose(f->file);
-	f->file = NULL;
+error1:
+	kug_free(f);
+error0:
+	return(ret);
+}
+
+static int __all_loaded(kug_file *f) {
+	int i;
+
+	for(i = 0; i < f->items; i++) {
+		if(f->item[i] != NULL && f->item[i]->data == NULL)
+			return(0);
+	}
+
+	return(1);
+}
+
+kug_status kug_open_for_write(char *name, kug_file *f) {
+	kug_status ret = KUG_ERROR;
+	char *point;
+
+	if(f->src == KUG_SRC_FILE && !__all_loaded(f)) {
+		ret = KUG_BADFMT;
+		goto error0;
+	}
+
+	ret = kug_close(f);
+	if(ret != KUG_OK)
+		goto error0;
+
+	f->file = fopen(name, "wb");
+	if(f->file == NULL) {
+		ret = KUG_NOENT;
+		goto error1;
+	}
+
+	if(f->basename != NULL)
+		free(f->basename);
+	f->basename = malloc(strlen(name) + 1);
+	if(f->basename == NULL) {
+		ret = KUG_NOMEM;
+		goto error1;
+	}
+	strcpy(f->basename, name);
+	point = strrchr(f->basename, '.');
+	if(point != NULL)
+		*point = '\0';
+
+	return(KUG_OK);
+
 error1:
 	kug_free(f);
 error0:
@@ -258,7 +311,7 @@ static kug_status __read_dir_item(kug_file *f, struct dirent *de) {
 		goto error0;
 	}
 
-	ret = __item_add_new(f);
+	ret = kug_add_item(f);
 	if(ret != KUG_OK)
 		goto error0;
 	it = __get_cur_item(f);
@@ -332,6 +385,8 @@ kug_status kug_open_dir(char *name, kug_file **fp) {
 	if(ret != KUG_OK)
 		goto error1;
 
+	f->src = KUG_SRC_DIRECTORY;
+
 	*fp = f;
 	return(KUG_OK);
 
@@ -348,6 +403,12 @@ kug_status kug_close(kug_file *f) {
 	if(fclose(f->file) < 0)
 		return(KUG_IO);
 	f->file = NULL;
+
+	if(f->basename == NULL)
+		return(KUG_BADFMT);
+	free(f->basename);
+	f->basename = NULL;
+	f->src = KUG_SRC_UNKNOWN;
 
 	return(KUG_OK);
 }
@@ -367,28 +428,94 @@ static kug_status __item_seekto(kug_file *f, int index) {
 
 kug_status kug_load(kug_file *f, int index) {
 	kug_status ret;
+	char filename[FILENAME_MAX];
+	FILE *in = NULL;
+	int length;
 
-	f->item[index]->data = malloc(f->item[index]->length);
-	if(f->item[index]->data == NULL) {
-		ret = KUG_NOMEM;
-		goto error0;
-	}
+	if(f->item[index] == NULL) /* Empty item, nothing to do. */
+		return(KUG_OK);
 
-	ret = __item_seekto(f, index);
-	if(ret != KUG_OK)
-		goto error1;
+	if(f->src == KUG_SRC_FILE) {
+		f->item[index]->data = malloc(f->item[index]->length);
+		if(f->item[index]->data == NULL) {
+			ret = KUG_NOMEM;
+			goto error0;
+		}
 
-	if(fread(f->item[index]->data, 1, f->item[index]->length, f->file) < f->item[index]->length) {
-		ret = KUG_IO;
-		goto error1;
+		ret = __item_seekto(f, index);
+		if(ret != KUG_OK)
+			goto error2;
+
+		if(fread(f->item[index]->data, 1, f->item[index]->length, f->file) < f->item[index]->length) {
+			ret = KUG_IO;
+			goto error2;
+		}
+	} else if(f->src == KUG_SRC_DIRECTORY) {
+		if(snprintf(filename, FILENAME_MAX, "%s/%s", f->basename, f->item[index]->name) == FILENAME_MAX) {
+			ret = KUG_BADFMT;
+			goto error0;
+		}
+
+		in = fopen(filename, "rb");
+		if(in == NULL) {
+			ret = KUG_IO;
+			goto error0;
+		}
+
+		if(fseek(in, SEEK_END, 0) < 0) {
+			ret = KUG_IO;
+			goto error1;
+		}
+		length = ftell(in);
+		if(length < 0) {
+			ret = KUG_IO;
+			goto error1;
+		}
+		f->item[index]->length = length;
+		if(fseek(in, SEEK_SET, 0) < 0) {
+			ret = KUG_IO;
+			goto error1;
+		}
+
+		f->item[index]->data = malloc(f->item[index]->length);
+		if(f->item[index]->data == NULL) {
+			ret = KUG_NOMEM;
+			goto error1;
+		}
+
+		if(fread(f->item[index]->data, 1, f->item[index]->length, f->file) < f->item[index]->length) {
+			ret = KUG_IO;
+			goto error2;
+		}
+	} else {
+		return(KUG_BADFMT);
 	}
 
 	return(KUG_OK);
 
-error1:
+error2:
 	free(f->item[index]->data);
+	f->item[index]->data = NULL;
+error1:
+	if(in != NULL)
+		fclose(in);
 error0:
 	return(ret);
+}
+
+kug_status kug_load_all(kug_file *f, void (*statuscallback)(int, int)) {
+	int i;
+	kug_status ret;
+
+	for(i = 0; i < f->items; i++) {
+		ret = kug_load(f, i);
+		if(ret != KUG_OK)
+			return(ret);
+		if(statuscallback != NULL)
+			statuscallback(i + 1, f->items);
+	}
+
+	return(KUG_OK);
 }
 
 FILE *__open_file_index(kug_file *f, int index, const char *mode) {
@@ -408,10 +535,12 @@ FILE *__open_file_index(kug_file *f, int index, const char *mode) {
 }
 
 void kug_unload(kug_file *f, int index) {
-	if(f->item[index]->data == NULL)
-		return;
-	free(f->item[index]->data);
-	f->item[index]->data = NULL;
+	if(f->item[index] != NULL) {
+		if(f->item[index]->data == NULL)
+			return;
+		free(f->item[index]->data);
+		f->item[index]->data = NULL;
+	}
 }
 
 kug_status __copy_data_out(kug_file *f, int index, FILE *out) {
@@ -479,6 +608,9 @@ kug_status __copy_data_in(kug_file *f, FILE *in) {
 kug_status kug_copy(kug_file *f, int index, FILE *out) {
 	kug_status ret;
 
+	if(f->item[index] == NULL)
+		return(KUG_NOENT);
+
 	if(f->item[index]->data != NULL) {
 		if(fwrite(f->item[index]->data, 1, f->item[index]->length, out) < f->item[index]->length)
 			return(KUG_IO);
@@ -498,7 +630,7 @@ static kug_status __write_item(kug_file *f, int index) {
 	kug_status ret;
 	FILE *in;
 
-	if(fprintf(f->file, "%s", f->item[index]->name) < 0)
+	if(fprintf(f->file, "%s", f->item[index]->name) < (int)strlen(f->item[index]->name))
 		return(KUG_IO);
 	if(fputc(0, f->file) == EOF)
 		return(KUG_IO);
@@ -512,11 +644,10 @@ static kug_status __write_item(kug_file *f, int index) {
 		if(in == NULL)
 			return(KUG_IO);
 		ret = __copy_data_in(f, in);
-		if(ret != KUG_OK) {
-			fclose(in);
-			return(ret);
-		}
 		fclose(in);
+
+		if(ret != KUG_OK)
+			return(ret);
 	}
 
 	return(KUG_OK);
@@ -526,12 +657,62 @@ kug_status kug_write(kug_file *f, void (*statuscallback)(int, int)) {
 	int i;
 	kug_status ret;
 
+	if(f->src != KUG_SRC_DIRECTORY && !__all_loaded(f))
+		return(KUG_BADFMT);
+
 	for(i = 0; i < f->items; i++) {
-		ret = __write_item(f, i);
-		if(ret != KUG_OK)
-			return(ret);
-		statuscallback(i, f->items);
+		if(f->item[i] != NULL) {
+			ret = __write_item(f, i);
+			if(ret != KUG_OK)
+				return(ret);
+			if(statuscallback != NULL)
+				statuscallback(i + 1, f->items);
+		}
 	}
 
 	return(KUG_OK);
+}
+
+kug_status kug_del_item(kug_file *f, int index) {
+	if(f->item[index] == NULL)
+		return(KUG_NOENT);
+
+	__item_free(f->item[index]);
+	f->item[index] = NULL;
+
+	if(index + 1 == f->items)
+		f->items--;
+
+	return(KUG_OK);
+}
+
+kug_iterator *kug_init_iterator(kug_file *f) {
+	kug_iterator *iter;
+
+	iter = malloc(sizeof(kug_iterator));
+	if(iter == NULL)
+		return(NULL);
+
+	iter->f = f;
+	iter->index = -1;
+
+	return(iter);
+}
+
+void kug_free_iterator(kug_iterator *iter) {
+	free(iter);
+}
+
+int kug_iter_next(kug_iterator *iter) {
+	iter->index++;
+
+	for(;;iter->index++) {
+		if(iter->index >= iter->f->items)
+			return(-1);
+
+		if(iter->f->item[iter->index] != NULL)
+			break;
+	}
+
+	return(iter->index);
 }

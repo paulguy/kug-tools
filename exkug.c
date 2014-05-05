@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
 	kug_file *f = NULL;
 	kug_status ret;
 	int temp;
+	kug_iterator *iter;
 	int i;
 	FILE *out;
 
@@ -39,25 +40,29 @@ int main(int argc, char **argv) {
 
 	temp = mkdir(basedir, 0755);
 	if(temp == 0) {
-		for(i = 0; i < f->items; i++) {
-			if(snprintf(filename, KUG_BUFFERSIZE, "%s/%s", basedir, f->item[i]->name) == KUG_BUFFERSIZE) {
-				fprintf(stderr, "File entry too long.\n");
-				exit(EXIT_FAILURE);
-			}
-			out = fopen(filename, "wb");
-			if(out == NULL) {
-				fprintf(stderr, "Couldn't open file %s.\n", filename);
-				exit(EXIT_FAILURE);
-			}
-			ret = kug_copy(f, i, out);
-			if(ret != KUG_OK) {
-				fprintf(stderr, "kug_copy: %s\n", kug_strerror(ret));
-				exit(EXIT_FAILURE);
-			}
-			fclose(out);
+		iter = kug_init_iterator(f);
+		if(iter != NULL) {
+			while((i = kug_iter_next(iter)) != -1) {
+				if(snprintf(filename, KUG_BUFFERSIZE, "%s/%s", basedir, f->item[i]->name) == KUG_BUFFERSIZE) {
+					fprintf(stderr, "File entry too long.\n");
+					exit(EXIT_FAILURE);
+				}
+				out = fopen(filename, "wb");
+				if(out == NULL) {
+					fprintf(stderr, "Couldn't open file %s.\n", filename);
+					exit(EXIT_FAILURE);
+				}
+				ret = kug_copy(f, i, out);
+				if(ret != KUG_OK) {
+					fprintf(stderr, "kug_copy: %s\n", kug_strerror(ret));
+					exit(EXIT_FAILURE);
+				}
+				fclose(out);
 
-			fprintf(stderr, "%i/%i\r", i + 1, f->items);
+				fprintf(stderr, "%i/%i\r", i + 1, f->items);
+			}
 		}
+		kug_free_iterator(iter);
 	} else {
 		perror("mkdir");
 	}

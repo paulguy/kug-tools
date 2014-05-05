@@ -6,6 +6,7 @@
 int main(int argc, char **argv) {
 	kug_file *f = NULL;
 	kug_status ret;
+	kug_iterator *iter;
 	int i;
 
 	if(argc < 2) {
@@ -21,8 +22,12 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	for(i = 0; i < f->items; i++)
-		fprintf(stderr, "%i: %s @%li\n", i, f->item[i]->name, f->item[i]->itempos);
+	iter = kug_init_iterator(f);
+	if(iter != NULL) {
+		while((i = kug_iter_next(iter)) != -1)
+			fprintf(stderr, "%i: %s @%li\n", i, f->item[i]->name, f->item[i]->itempos);
+	}
+	kug_free_iterator(iter);
 
 	kug_free(f);
 
