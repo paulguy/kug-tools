@@ -33,3 +33,7 @@ int kug_iter_next(kug_iterator *iter) {
 
 	return(iter->index);
 }
+
+void kug_iter_reset(kug_iterator *iter) {
+	iter->index = -1;
+}

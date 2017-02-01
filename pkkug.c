@@ -4,7 +4,7 @@
 
 #include "kugfile.h"
 
-void printstatus(int complete, int total);
+void printstatus(void *data, unsigned int complete, unsigned int total);
 
 int main(int argc, char **argv) {
 	kug_file *f = NULL;
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 	if(f->file == NULL) {
 		fprintf(stderr, "kug_open_for_write: %s: %s.", filename, kug_strerror(ret));
 	} else {
-		ret = kug_write(f, printstatus);
+		ret = kug_write(f, NULL, printstatus);
 		fprintf(stderr, "\n");
 		if(ret != KUG_OK) {
 			fprintf(stderr, "kug_write: %s\n", kug_strerror(ret));
@@ -50,6 +50,6 @@ int main(int argc, char **argv) {
 	exit(EXIT_SUCCESS);
 }
 
-void printstatus(int complete, int total) {
+void printstatus(void *data, unsigned int complete, unsigned int total) {
 	fprintf(stderr, "%i/%i\r", complete, total);
 }

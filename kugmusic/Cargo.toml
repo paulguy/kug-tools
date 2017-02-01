@@ -1,0 +1,10 @@
+[package]
+name = "kugmusic"
+version = "0.1.0"
+authors = ["Paul LaMendola <paulguy119@gmail.com>"]
+
+[lib]
+name = "kugmusic"
+
+[dependencies]
+tini="*"

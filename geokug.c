@@ -4,10 +4,13 @@
 #include <limits.h>
 
 #include "kugfile.h"
+#include "kugiter.h"
 
 typedef struct {
 	int x, y;
 } position;
+
+kug_iterator *iter; /* reusable */
 
 void parsename(position *pos, char *name);
 int containspos(kug_file *f, position *pos);
@@ -40,7 +43,13 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	for(i = 0; i < f->items; i++) {
+	iter = kug_init_iterator(f);
+	if(iter == NULL) {
+		fprintf(stderr, "Couldn't initialize iterator.\n");
+		kug_free(f);
+		exit(EXIT_FAILURE);
+	}
+	while((i = kug_iter_next(iter)) != -1) {
 		parsename(&pos, f->item[i]->name);
 
 		if(pos.x < min.x)
@@ -67,6 +76,7 @@ int main(int argc, char **argv) {
 		fputc('\n', stderr);
 	}
 
+	kug_free_iterator(iter);
 	kug_free(f);
 
 	exit(EXIT_SUCCESS);
@@ -88,9 +98,10 @@ void parsename(position *pos, char *name) {
 }
 
 int containspos(kug_file *f, position *pos) {
-	int i;
+	unsigned int i;
 	position cur;
 
+	kug_iter_reset(iter);
 	for(i = 0; i < f->items; i++) {
 		parsename(&cur, f->item[i]->name);
 		if(memcmp(pos, &cur, sizeof(position)) == 0)

@@ -22,8 +22,8 @@ typedef struct {
 typedef struct {
 	char *basename;
 	kug_item **item;
-	int items;
-	int itemlistsize;
+	unsigned int items;
+	unsigned int itemlistsize;
 	FILE *file;
 	kug_source src;
 } kug_file;
@@ -89,17 +89,18 @@ kug_status kug_close(kug_file *f);
  *
  * return		Status.
  */
-kug_status kug_load(kug_file *f, int index);
+kug_status kug_load(kug_file *f, unsigned int index);
 
 /*
  * Load all data in to memory.
  *
  * f				KUG context to operate on.
+ * userdata			User data pointer to pass to callback.  May be NULL.
  * statuscallback	Function called on completion of each item loaded, receives the last item loaded and total items to load.  Can be NULL to not call anything.
  *
  * return			Status.
  */
-kug_status kug_load_all(kug_file *f, void (*statuscallback)(int, int));
+kug_status kug_load_all(kug_file *f, void *userdata, void (*statuscallback)(void *, unsigned int, unsigned int));
 
 /*
  * Unload data from memory.
@@ -107,7 +108,7 @@ kug_status kug_load_all(kug_file *f, void (*statuscallback)(int, int));
  * f			KUG context to operate on.
  * index		Item to unload.
  */
-void kug_unload(kug_file *f, int index);
+void kug_unload(kug_file *f, unsigned int index);
 
 /*
  * Copy data from a file source or memory to a file, but not from a directory source.
@@ -118,17 +119,18 @@ void kug_unload(kug_file *f, int index);
  *
  * return		Status.
  */
-kug_status kug_copy(kug_file *f, int index, FILE *out);
+kug_status kug_copy(kug_file *f, unsigned int index, FILE *out);
 
 /*
  * Copy data from memory or directory source to a KUG file.  This will only work if the source is a directory or all data is in memory, else an error is returned.
  *
  * f				KUG context to operate on.
+ * userdata			User data pointer to pass to callback.  May be NULL.
  * statuscallback	Function called on completion of each item written, receives the last item written and total items to write.  Can be NULL to not call anything.
  *
  * return			Status.
  */
-kug_status kug_write(kug_file *f, void (*statuscallback)(int, int));
+kug_status kug_write(kug_file *f, void *userdata, void (*statuscallback)(void *, unsigned int, unsigned int));
 
 /*
  * Add a new item.
@@ -147,6 +149,6 @@ kug_status kug_add_item(kug_file *f);
  *
  * return		Status.
  */
-kug_status kug_del_item(kug_file *f, int index);
+kug_status kug_del_item(kug_file *f, unsigned int index);
 
 #endif

@@ -237,7 +237,7 @@ error0:
 }
 
 static int __all_loaded(kug_file *f) {
-	int i;
+	unsigned int i;
 
 	for(i = 0; i < f->items; i++) {
 		if(f->item[i] != NULL && f->item[i]->data == NULL)
@@ -413,7 +413,7 @@ kug_status kug_close(kug_file *f) {
 	return(KUG_OK);
 }
 
-static kug_status __item_seekto(kug_file *f, int index) {
+static kug_status __item_seekto(kug_file *f, unsigned int index) {
 	if(fseek(f->file, f->item[index]->itempos, SEEK_SET) < 0)
 		return(KUG_IO);
 
@@ -426,7 +426,7 @@ static kug_status __item_seekto(kug_file *f, int index) {
 	return(KUG_OK);
 }
 
-kug_status kug_load(kug_file *f, int index) {
+kug_status kug_load(kug_file *f, unsigned int index) {
 	kug_status ret;
 	char filename[FILENAME_MAX];
 	FILE *in = NULL;
@@ -503,22 +503,24 @@ error0:
 	return(ret);
 }
 
-kug_status kug_load_all(kug_file *f, void (*statuscallback)(int, int)) {
-	int i;
+kug_status kug_load_all(kug_file *f, void *userdata, void (*statuscallback)(void *, unsigned int, unsigned int)) {
+	unsigned int i;
 	kug_status ret;
 
 	for(i = 0; i < f->items; i++) {
-		ret = kug_load(f, i);
-		if(ret != KUG_OK)
-			return(ret);
-		if(statuscallback != NULL)
-			statuscallback(i + 1, f->items);
+		if(f->item[i] != NULL) {
+			ret = kug_load(f, i);
+			if(ret != KUG_OK)
+				return(ret);
+			if(statuscallback != NULL)
+				statuscallback(userdata, i + 1, f->items);
+		}
 	}
 
 	return(KUG_OK);
 }
 
-FILE *__open_file_index(kug_file *f, int index, const char *mode) {
+static FILE *__open_file_index(kug_file *f, unsigned int index, const char *mode) {
 	char filename[KUG_BUFFERSIZE];
 	FILE *in;
 	int len;
@@ -534,7 +536,7 @@ FILE *__open_file_index(kug_file *f, int index, const char *mode) {
 	return(in);
 }
 
-void kug_unload(kug_file *f, int index) {
+void kug_unload(kug_file *f, unsigned int index) {
 	if(f->item[index] != NULL) {
 		if(f->item[index]->data == NULL)
 			return;
@@ -543,7 +545,7 @@ void kug_unload(kug_file *f, int index) {
 	}
 }
 
-kug_status __copy_data_out(kug_file *f, int index, FILE *out) {
+static kug_status __copy_data_out(kug_file *f, unsigned int index, FILE *out) {
 	unsigned int i;
 	unsigned int len;
 	kug_status ret;
@@ -563,7 +565,7 @@ kug_status __copy_data_out(kug_file *f, int index, FILE *out) {
 	return(KUG_OK);
 }
 
-kug_status __copy_data_in(kug_file *f, FILE *in) {
+static kug_status __copy_data_in(kug_file *f, FILE *in) {
 	unsigned int len, totlen;
 	long cur, end;
 
@@ -605,7 +607,7 @@ kug_status __copy_data_in(kug_file *f, FILE *in) {
 	return(KUG_OK);
 }
 
-kug_status kug_copy(kug_file *f, int index, FILE *out) {
+kug_status kug_copy(kug_file *f, unsigned int index, FILE *out) {
 	kug_status ret;
 
 	if(f->item[index] == NULL)
@@ -626,7 +628,7 @@ kug_status kug_copy(kug_file *f, int index, FILE *out) {
 	return(KUG_OK);
 }
 
-static kug_status __write_item(kug_file *f, int index) {
+static kug_status __write_item(kug_file *f, unsigned int index) {
 	kug_status ret;
 	FILE *in;
 
@@ -653,8 +655,8 @@ static kug_status __write_item(kug_file *f, int index) {
 	return(KUG_OK);
 }
 
-kug_status kug_write(kug_file *f, void (*statuscallback)(int, int)) {
-	int i;
+kug_status kug_write(kug_file *f, void *userdata, void (*statuscallback)(void *, unsigned int, unsigned int)) {
+	unsigned int i;
 	kug_status ret;
 
 	if(f->src != KUG_SRC_DIRECTORY && !__all_loaded(f))
@@ -666,14 +668,14 @@ kug_status kug_write(kug_file *f, void (*statuscallback)(int, int)) {
 			if(ret != KUG_OK)
 				return(ret);
 			if(statuscallback != NULL)
-				statuscallback(i + 1, f->items);
+				statuscallback(userdata, i + 1, f->items);
 		}
 	}
 
 	return(KUG_OK);
 }
 
-kug_status kug_del_item(kug_file *f, int index) {
+kug_status kug_del_item(kug_file *f, unsigned int index) {
 	if(f->item[index] == NULL)
 		return(KUG_NOENT);
 

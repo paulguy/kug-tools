@@ -2,7 +2,7 @@
 
 typedef struct {
 	kug_file *f;
-	int index;
+	unsigned int index;
 } kug_iterator;
 
 /*
@@ -29,3 +29,10 @@ void kug_free_iterator(kug_iterator *iter);
  * return	Next index.
  */
 int kug_iter_next(kug_iterator *iter);
+
+/*
+ * Reset iterator.
+ *
+ * iter		Iterator to reset.
+ */
+void kug_iter_reset(kug_iterator *iter);
